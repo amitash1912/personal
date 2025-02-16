@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Usage Dashboard (Jan15–Feb15)</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f7f8fa;
+      color: #333;
+    }
+
+    /* ----- Header / Summary ----- */
+    header {
+      background-color: #fff;
+      border-bottom: 1px solid #ccc;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap; /* Responsive wrapping if viewport is narrow */
+    }
+    .summary-info {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .summary-info div strong {
+      display: block;
+      font-size: 1.1rem;
+      margin-bottom: 0.3rem;
+    }
+
+    /* ----- Main Layout ----- */
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      padding: 1rem 2rem 2rem;
+      max-width: 1200px; /* limit max width for readability */
+      margin: 0 auto;
+    }
+
+    /* ----- Daily Bar Chart ----- */
+    .chart-section {
+      background-color: #fff;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      overflow-x: auto; /* allows horizontal scroll if chart is wide */
+    }
+    .chart-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      font-weight: bold;
+    }
+    .bar-chart-wrapper {
+      display: inline-flex;  /* so it expands horizontally */
+      align-items: flex-end;
+      gap: 0.5rem;
+      height: 150px;
+      margin: 1rem 0;
+      border-bottom: 1px solid #ccc;
+      position: relative;
+      padding-bottom: 30px; /* room for x-axis labels */
+      min-width: 900px; /* ensures enough width for 31 bars */
+    }
+    .chart-y-axis {
+      position: absolute;
+      left: -40px;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      font-size: 0.8rem;
+      color: #666;
+    }
+    /* Each bar + day label */
+    .bar-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .bar {
+      width: 20px;
+      background-color: #5b9bd5;
+      border-radius: 3px 3px 0 0;
+      margin-bottom: 4px;
+      position: relative;
+      pointer-events: auto; /* ensure we can hover over the bar */
+    }
+    .bar:hover::after {
+      content: attr(data-value) " active conns";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #000;
+      color: #fff;
+      padding: 2px 5px;
+      font-size: 0.8rem;
+      border-radius: 3px;
+      white-space: nowrap;
+      z-index: 9999; /* ensure tooltip is on top */
+    }
+    .bar-label {
+      font-size: 0.65rem;
+      color: #666;
+      writing-mode: vertical-lr; /* Optional: vertical text */
+      transform: rotate(180deg);
+      margin-top: 3px;
+    }
+
+    /* ----- Gantt Timeline ----- */
+    .timeline-section {
+      background-color: #fff;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      overflow-x: auto; /* allows horizontal scroll if timeline is wide */
+    }
+    .timeline-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      font-weight: bold;
+    }
+    .timeline-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 600px; /* ensures it won't collapse on small screens */
+    }
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      position: relative;
+    }
+    .conn-label {
+      width: 90px;
+      flex-shrink: 0;
+      font-weight: bold;
+      margin-right: 1rem;
+      color: #333;
+    }
+    .gantt-bar-container {
+      flex-grow: 1;
+      position: relative;
+      height: 20px;
+      background-color: #f1f1f1;
+      border-radius: 4px;
+      /* changed from 'overflow: hidden;' to 'overflow: visible;' so tooltips won't be clipped */
+      overflow: visible;
+    }
+    .gantt-bar {
+      position: absolute;
+      height: 100%;
+      background-color: #5b9bd5; /* Single color for entire Gantt chart */
+      border-radius: 4px;
+      pointer-events: auto; /* Ensure the bar can be hovered */
+    }
+    /* Tooltip for Gantt on hover using data-interval */
+    .gantt-bar:hover::after {
+      content: attr(data-interval);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #000;
+      color: #fff;
+      padding: 2px 5px;
+      font-size: 0.8rem;
+      border-radius: 3px;
+      white-space: nowrap;
+      z-index: 9999; /* ensure tooltip is on top */
+    }
+
+    /* ----- Daily Usage Table ----- */
+    .detailed-table-section {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    .detailed-table-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      font-weight: bold;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      min-width: 600px;
+    }
+    table thead {
+      background-color: #f1f1f1;
+    }
+    table th,
+    table td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h2>Usage Dashboard</h2>
+  <div class="summary-info">
+    <div>
+      <strong>Billing Cycle</strong>
+      Jan15–Feb15, 2025
+    </div>
+    <div>
+      <strong>Estimated Cost</strong>
+      $1,500 (Example)
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- 1) Daily Active Connections (31 bars) -->
+  <section class="chart-section">
+    <div class="chart-title">Daily Active Connections</div>
+    <div class="bar-chart-wrapper">
+      <!-- Y-Axis Markers -->
+      <div class="chart-y-axis">
+        <div>10</div>
+        <div>5</div>
+        <div>0</div>
+      </div>
+
+      <!-- Example concurrency data for each day from Jan 15 to Feb 14 -->
+      <!-- Use bar's data-value attribute for hover tooltips -->
+      <div class="bar-group">
+        <div class="bar" style="height:20px;" data-value="2"></div>
+        <div class="bar-label">1/15</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:30px;" data-value="3"></div>
+        <div class="bar-label">1/16</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:50px;" data-value="5"></div>
+        <div class="bar-label">1/17</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:40px;" data-value="4"></div>
+        <div class="bar-label">1/18</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:0px;" data-value="0"></div>
+        <div class="bar-label">1/19</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:50px;" data-value="5"></div>
+        <div class="bar-label">1/20</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:60px;" data-value="6"></div>
+        <div class="bar-label">1/21</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:70px;" data-value="7"></div>
+        <div class="bar-label">1/22</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:90px;" data-value="9"></div>
+        <div class="bar-label">1/23</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:80px;" data-value="8"></div>
+        <div class="bar-label">1/24</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:100px;" data-value="10"></div>
+        <div class="bar-label">1/25</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:100px;" data-value="10"></div>
+        <div class="bar-label">1/26</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:40px;" data-value="4"></div>
+        <div class="bar-label">1/27</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:20px;" data-value="2"></div>
+        <div class="bar-label">1/28</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:50px;" data-value="5"></div>
+        <div class="bar-label">1/29</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:80px;" data-value="8"></div>
+        <div class="bar-label">1/30</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:30px;" data-value="3"></div>
+        <div class="bar-label">1/31</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:70px;" data-value="7"></div>
+        <div class="bar-label">2/1</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:100px;" data-value="10"></div>
+        <div class="bar-label">2/2</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:100px;" data-value="10"></div>
+        <div class="bar-label">2/3</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:60px;" data-value="6"></div>
+        <div class="bar-label">2/4</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:20px;" data-value="2"></div>
+        <div class="bar-label">2/5</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:0px;" data-value="0"></div>
+        <div class="bar-label">2/6</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:10px;" data-value="1"></div>
+        <div class="bar-label">2/7</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:50px;" data-value="5"></div>
+        <div class="bar-label">2/8</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:50px;" data-value="5"></div>
+        <div class="bar-label">2/9</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:80px;" data-value="8"></div>
+        <div class="bar-label">2/10</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:90px;" data-value="9"></div>
+        <div class="bar-label">2/11</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:100px;" data-value="10"></div>
+        <div class="bar-label">2/12</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:100px;" data-value="10"></div>
+        <div class="bar-label">2/13</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height:40px;" data-value="4"></div>
+        <div class="bar-label">2/14</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2) Connection Activity Timeline (10 connections, single color) -->
+  <section class="timeline-section">
+    <div class="timeline-title">Connection Activity Timeline</div>
+    <p style="font-size:0.9rem; color:#555;">
+      Hover a bar to see the enablement period for that connection.
+    </p>
+    <div class="timeline-container">
+      <!-- Entire cycle = 31 days. Each day ~3.23% width. Example intervals only. -->
+      <!-- Notice we changed .gantt-bar-container to overflow: visible; 
+           so tooltips won't be clipped. -->
+
+      <!-- conn_001: entire cycle (Jan 15–Feb 14) => left:0%, width:100% -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_001</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:0%; width:100%;"
+               data-interval="Jan 15 – Feb 14"></div>
+        </div>
+      </div>
+
+      <!-- conn_002: Jan 15–Jan 24 => ~32.3% width -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_002</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:0%; width:32.3%;"
+               data-interval="Jan 15 – Jan 24"></div>
+        </div>
+      </div>
+
+      <!-- conn_003: multiple intervals -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_003</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:0%; width:12.9%;"
+               data-interval="Jan 15 – Jan 18"></div>
+          <div class="gantt-bar"
+               style="left:16.1%; width:19.4%;"
+               data-interval="Jan 20 – Jan 25"></div>
+          <div class="gantt-bar"
+               style="left:54.8%; width:12.9%;"
+               data-interval="Feb 2 – Feb 5"></div>
+        </div>
+      </div>
+
+      <!-- conn_004: Jan 25–Jan 30, re-enabled Feb 5–Feb 10 -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_004</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:32.3%; width:19.4%;"
+               data-interval="Jan 25 – Jan 30"></div>
+          <div class="gantt-bar"
+               style="left:64.5%; width:19.4%;"
+               data-interval="Feb 5 – Feb 10"></div>
+        </div>
+      </div>
+
+      <!-- conn_005: short interval Jan 15–Jan 17 -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_005</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:0%; width:9.7%;"
+               data-interval="Jan 15 – Jan 17"></div>
+        </div>
+      </div>
+
+      <!-- conn_006: toggled multiple times -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_006</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:3.23%; width:9.7%;"
+               data-interval="Jan 16 – Jan 18"></div>
+          <div class="gantt-bar"
+               style="left:19.4%; width:12.9%;"
+               data-interval="Jan 21 – Jan 24"></div>
+          <div class="gantt-bar"
+               style="left:41.9%; width:12.9%;"
+               data-interval="Jan 28 – Jan 31"></div>
+          <div class="gantt-bar"
+               style="left:58.1%; width:9.7%;"
+               data-interval="Feb 3 – Feb 5"></div>
+        </div>
+      </div>
+
+      <!-- conn_007: last half => Feb 1–Feb 14 => 14 days => ~45.2%, left ~54.8% -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_007</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:54.8%; width:45.2%;"
+               data-interval="Feb 1 – Feb 14"></div>
+        </div>
+      </div>
+
+      <!-- conn_008: smaller intervals -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_008</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:3.23%; width:6.45%;"
+               data-interval="Jan 16 – Jan 17"></div>
+          <div class="gantt-bar"
+               style="left:38.7%; width:9.7%;"
+               data-interval="Jan 27 – Jan 29"></div>
+          <div class="gantt-bar"
+               style="left:64.5%; width:9.7%;"
+               data-interval="Feb 5 – Feb 7"></div>
+        </div>
+      </div>
+
+      <!-- conn_009: entire cycle -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_009</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:0%; width:100%;"
+               data-interval="Jan 15 – Feb 14"></div>
+        </div>
+      </div>
+
+      <!-- conn_010: short intervals -->
+      <div class="timeline-row">
+        <div class="conn-label">conn_010</div>
+        <div class="gantt-bar-container">
+          <div class="gantt-bar"
+               style="left:0%; width:6.45%;"
+               data-interval="Jan 15 – Jan 16"></div>
+          <div class="gantt-bar"
+               style="left:54.8%; width:6.45%;"
+               data-interval="Feb 1 – Feb 2"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3) Daily Usage Table (31 rows, no notes column) -->
+  <section class="detailed-table-section">
+    <div class="detailed-table-title">Daily Usage & Cost</div>
+    <p style="color:#555; font-size:0.9rem;">
+      Example tier logic: 1–3 connections = $0 each, 4–10 = $40 each. (Data is illustrative.)
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Active Conns</th>
+          <th>Tier</th>
+          <th>Daily Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Dummy data from Jan 15 – Feb 14. Adjust as needed. -->
+        <tr><td>Jan 15</td><td>2</td><td>Tier A</td><td>$0</td></tr>
+        <tr><td>Jan 16</td><td>3</td><td>Tier A</td><td>$0</td></tr>
+        <tr><td>Jan 17</td><td>5</td><td>Tier B</td><td>$200</td></tr>
+        <tr><td>Jan 18</td><td>4</td><td>Tier B</td><td>$160</td></tr>
+        <tr><td>Jan 19</td><td>0</td><td>None</td><td>$0</td></tr>
+        <tr><td>Jan 20</td><td>5</td><td>Tier B</td><td>$200</td></tr>
+        <tr><td>Jan 21</td><td>6</td><td>Tier B</td><td>$240</td></tr>
+        <tr><td>Jan 22</td><td>7</td><td>Tier B</td><td>$280</td></tr>
+        <tr><td>Jan 23</td><td>9</td><td>Tier B</td><td>$360</td></tr>
+        <tr><td>Jan 24</td><td>8</td><td>Tier B</td><td>$320</td></tr>
+        <tr><td>Jan 25</td><td>10</td><td>Tier B</td><td>$400</td></tr>
+        <tr><td>Jan 26</td><td>10</td><td>Tier B</td><td>$400</td></tr>
+        <tr><td>Jan 27</td><td>4</td><td>Tier B</td><td>$160</td></tr>
+        <tr><td>Jan 28</td><td>2</td><td>Tier A</td><td>$0</td></tr>
+        <tr><td>Jan 29</td><td>5</td><td>Tier B</td><td>$200</td></tr>
+        <tr><td>Jan 30</td><td>8</td><td>Tier B</td><td>$320</td></tr>
+        <tr><td>Jan 31</td><td>3</td><td>Tier A</td><td>$0</td></tr>
+        <tr><td>Feb 1</td><td>7</td><td>Tier B</td><td>$280</td></tr>
+        <tr><td>Feb 2</td><td>10</td><td>Tier B</td><td>$400</td></tr>
+        <tr><td>Feb 3</td><td>10</td><td>Tier B</td><td>$400</td></tr>
+        <tr><td>Feb 4</td><td>6</td><td>Tier B</td><td>$240</td></tr>
+        <tr><td>Feb 5</td><td>2</td><td>Tier A</td><td>$0</td></tr>
+        <tr><td>Feb 6</td><td>0</td><td>None</td><td>$0</td></tr>
+        <tr><td>Feb 7</td><td>1</td><td>Tier A</td><td>$0</td></tr>
+        <tr><td>Feb 8</td><td>5</td><td>Tier B</td><td>$200</td></tr>
+        <tr><td>Feb 9</td><td>5</td><td>Tier B</td><td>$200</td></tr>
+        <tr><td>Feb 10</td><td>8</td><td>Tier B</td><td>$320</td></tr>
+        <tr><td>Feb 11</td><td>9</td><td>Tier B</td><td>$360</td></tr>
+        <tr><td>Feb 12</td><td>10</td><td>Tier B</td><td>$400</td></tr>
+        <tr><td>Feb 13</td><td>10</td><td>Tier B</td><td>$400</td></tr>
+        <tr><td>Feb 14</td><td>4</td><td>Tier B</td><td>$160</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+</body>
+</html>
